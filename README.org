@@ -1,0 +1,17 @@
+* Rust2A1
+  This is just a small simple library that aims to manage chess notation.
+
+Implementation of shortened standard notaiton should be done with an impl of fmt.
+
+** Moves type left [3/5]
+*** DONE Capture
+*** DONE Rock
+*** TODO Queening
+*** TODO En Passant
+*** DONE Move
+
+** Output format types left [1/4]
+*** TODO Capture
+*** TODO Rock
+*** TODO Queening
+*** DONE Move

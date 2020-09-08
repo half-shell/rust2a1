@@ -1,0 +1,256 @@
+use std::fmt;
+use std::cmp;
+
+const BOARD_SIZE: usize = 8;
+
+#[derive(Debug, Copy, Clone)]
+struct Position {
+    x: usize, // TODO(brick): This should be u8, not usize
+    y: usize,
+}
+
+impl fmt::Display for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let files: [char; BOARD_SIZE] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+
+        write!(
+            f,
+            "{} {}",
+            files[std::mem::size_of::<char>() * self.x],
+            self.y - 1
+        )
+    }
+}
+
+impl cmp::PartialEq for Position {
+    fn eq(&self, other: &Self) -> bool {
+        if self.x == other.x && self.y == other.y {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+fn string_to_position(coordinates: &str) -> Position {
+    // TODO(brick): Handle exceptions when parsing string
+    // This should also be able to take into account annotation for pieces taken,
+    // castling, promotion...
+    let (file, rank) = coordinates.split_at(1);
+
+    println!("{}, {}", file, rank);
+
+    Position {
+        x: 2,
+        y: rank
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+struct Piece {
+    piece_type: PieceType,
+    position: Position,
+    side: Player,
+}
+
+struct Move {
+    from: Position,
+    to: Position,
+    // NOTE(brick): This could be an `Option` or even removed in the first iteration
+    // since we don't know the Piece moved before knowing the `from` param
+    piece: Piece,
+}
+
+struct Game {
+    player: Player,
+    moves: Vec<Move>,
+    board: Vec<Piece>
+}
+
+impl fmt::Display for Game {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{} {}",
+            self.moves[0].piece.piece_type, self.moves[0].from, self.moves[0].to
+        )
+    }
+}
+
+impl Game {
+    fn move_piece(&mut self, from: Position, to: Position) -> &Self {
+        let piece_idx = self.board.iter().position(|piece| piece.position == from);
+
+        match piece_idx {
+            Some(idx) => {
+                // TODO(brick): Add capture behaviour
+                let mut piece = self.board[idx];
+
+                piece.position = to;
+
+                let new_move = Move {
+                    from: from,
+                    to: to,
+                    piece: piece
+                };
+
+                self.moves.push(new_move);
+
+                return self
+            },
+            _ => self
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum PieceType {
+    King,
+    Queen,
+    Rook,
+    Bishop,
+    Knight,
+    Pon,
+}
+
+impl fmt::Display for PieceType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                PieceType::King => "K",
+                PieceType::Queen => "Q",
+                PieceType::Rook => "R",
+                PieceType::Bishop => "B",
+                PieceType::Knight => "N",
+                PieceType::Pon => "P"
+            }
+        )
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+enum Player {
+    White,
+    Black
+}
+
+// NOTE(brick): If Vec is an Array, we can build a static board and let the
+// array's position determine the coordinates
+// OR we can just use a static array storing the 32 pieces and not worry about the board
+// OR we can build a static array of references to pieces so we can avoid memory size
+// calculation issue
+impl Game {
+    fn build_board(& mut self) -> &Self {
+        let white_pon = Piece {
+            piece_type: PieceType::Pon,
+            position: Position { x: 2, y: 2 },
+            side: Player::White,
+        };
+
+        self.board = Vec::new();
+
+        self.board.push(white_pon);
+
+        self
+    }
+}
+
+// TODO(brick): List all rules validation
+fn is_move_valid(board: Vec<Piece>, from: Position, to: Position) -> bool {
+    let piece_idx = board.iter().position(
+        |p| p.position.x == from.x && p.position.y == from.y
+    );
+
+    match piece_idx {
+        Some(idx) => {
+            let piece = board[idx];
+
+            match piece.piece_type {
+                PieceType::King => {
+                    (to.x == from.x + 1 && to.y == from.y)
+                        || (to.x == from.x - 1 && to.y == from.y)
+                        || (to.y == from.y + 1 && to.x == from.x)
+                        || (to.y == from.y - 1 && to.x == from.x)
+                        || (to.x == from.x + 1 && to.y == from.y + 1)
+                        || (to.x == from.x - 1 && to.y == from.y + 1)
+                        || (to.x == from.x + 1 && to.y == from.y - 1)
+                        || (to.x == from.x - 1 && to.y == from.y - 1)
+                },
+                PieceType::Queen => false,
+                PieceType::Rook => false,
+                PieceType::Bishop => false,
+                PieceType::Knight => false,
+                PieceType::Pon => false
+            }
+        },
+        None => false
+    }
+
+}
+
+fn main() {
+    let mut blank_game = Game {
+        player: Player::White,
+        moves: vec!(),
+        board: vec!()
+    };
+
+    let mut game = Game::build_board(& mut blank_game);
+
+    for piece in &game.board {
+        println!("{:?}", piece);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // #[test]
+    // fn it_works() {
+    //     let mut blank_game = crate::Game {
+    //         player: crate::Player::White,
+    //         moves: vec!(),
+    //         board: vec!()
+    //     };
+
+    //     let mut game = crate::Game::build_board(& mut blank_game);
+
+    //     // NOTE(brick): c3 matches starting position from both Knight (b1)
+    //     // and pon (c2) board.move_piece("pc3");
+    //     game.move_piece(crate::Position {x: 3, y: 2}, crate::Position {x: 3, y: 3});
+
+    //     // Pon to c4
+    //     // game.move_piece("c4");
+
+    //     for piece in game.board {
+    //         println!("{:?}", piece);
+    //     }
+
+    //     assert_eq!(2 + 2, 5);
+    // }
+
+    #[test]
+    fn parsing_basic_move() {
+        let result = crate::Position {
+            x: 2,
+            y: 2
+        };
+
+        assert_eq!(crate::string_to_position("b2"), result);
+    }
+
+    // fn white_pon_c3_registers_correctly() {
+    //     let mut board = crate::build_board();
+
+    //     board.move_piece("c2", "c3");
+
+    //     assert_eq(format!("{}", game.moves), "Pc2 c3");
+    // }
+
+    // fn white_knight_c3_registers_correctly() {}
+
+    // fn white_pon_can_capture() {}
+
+    // fn black_knight_can_capture() {}
+}
